@@ -1,0 +1,6 @@
+{
+  "appId": "ir.brass.meltanalysis",
+  "appName": "آنالیز ذوب",
+  "webDir": "www",
+  "android": { "backgroundColor": "#1F2A31" }
+}

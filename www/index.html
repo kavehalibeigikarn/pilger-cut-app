@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F2A31">
+<title>محاسبه آنالیز ذوب</title>
+<style>
+@font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Regular.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Medium.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Bold.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-ExtraBold.woff2") format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"Vazirmatn";src:url("fonts/Vazirmatn-Black.woff2") format("woff2");font-weight:900;font-display:swap}
+</style>
+<style>
+:root{
+  --bg:#E7EAEA; --surface:#FFFFFF; --ink:#1B2227; --muted:#58646C; --line:#C4CBCE;
+  --rz:#5A4796; --rz-soft:#E6E1F4; --st:#1E6E62; --st-soft:#D6EEE9; --brass:#946A17; --brass-soft:#F2E6CC;
+  --cu:#A9431C; --cu-soft:#F6E1D6; --zn:#2F5F86; --zn-soft:#DCE7F1; --ok:#2E6B45; --ok-soft:#DDEEE3;
+  --danger:#A12A2A; --bar:#1F2A31; --bar-ink:#EEF1F2; --bar-muted:#93A1AA;
+  --font:"Vazirmatn", Tahoma, "Segoe UI", sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141A1E; --surface:#1E262C; --ink:#EDF0F1; --muted:#9BA8B0; --line:#34414A;
+    --rz:#AE9CEB; --rz-soft:#2A2640; --st:#6CCBB8; --st-soft:#193430; --brass:#D8A84A; --brass-soft:#3A3120;
+    --cu:#E27B50; --cu-soft:#3C2821; --zn:#80AAD0; --zn-soft:#1F3040; --ok:#6CC08E; --ok-soft:#1D3327;
+    --danger:#E07070; --bar:#0F1417; --bar-ink:#EDF0F1; --bar-muted:#7F8D95;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141A1E; --surface:#1E262C; --ink:#EDF0F1; --muted:#9BA8B0; --line:#34414A;
+  --rz:#AE9CEB; --rz-soft:#2A2640; --st:#6CCBB8; --st-soft:#193430; --brass:#D8A84A; --brass-soft:#3A3120;
+  --cu:#E27B50; --cu-soft:#3C2821; --zn:#80AAD0; --zn-soft:#1F3040; --ok:#6CC08E; --ok-soft:#1D3327;
+  --danger:#E07070; --bar:#0F1417; --bar-ink:#EDF0F1; --bar-muted:#7F8D95;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+button,input{font-family:inherit;font-size:inherit;color:inherit}
+bdi.n{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{background:var(--bar);color:var(--bar-ink);position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+.top-inner{max-width:620px;margin:0 auto;padding:12px 16px 0}
+.app-title{font-size:15px;font-weight:500;color:var(--bar-muted);margin:0 0 8px}
+.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:0;background:transparent;color:var(--bar-muted);padding:8px 14px 10px;border-radius:10px 10px 0 0;cursor:pointer;text-align:right;line-height:1.3}
+.tab .t-name{display:block;font-weight:700;font-size:16px}
+.tab .t-alloy{display:block;font-size:13px}
+.tab[aria-selected="true"]{background:var(--bg);color:var(--ink)}
+.tab[aria-selected="true"] .t-alloy{color:var(--brass)}
+.tab.add{font-size:26px;font-weight:400;padding:4px 16px;color:var(--bar-ink)}
+.tab:focus-visible,.btn:focus-visible,.nav button:focus-visible,.link:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+
+main{max-width:620px;margin:0 auto;padding:16px 16px 110px}
+h2{font-size:15px;font-weight:700;color:var(--muted);margin:22px 2px 8px}
+h2:first-child{margin-top:4px}
+
+/* fixed values: two separate blocks */
+.fixed{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fx{border:0;border-radius:14px;overflow:hidden;padding:0;text-align:right;cursor:pointer;background:var(--surface);display:flex;flex-direction:column}
+.fx .fx-h{display:flex;align-items:center;gap:6px;padding:7px 12px;font-size:14px;font-weight:700;color:#fff}
+.fx .fx-v{padding:6px 12px 10px;font-size:34px;font-weight:900;line-height:1.2}
+.fx .fx-v small{font-size:17px;font-weight:700;margin-inline-start:2px}
+.fx.rz .fx-h{background:var(--rz)} .fx.rz{background:var(--rz-soft)} .fx.rz .fx-v{color:var(--rz)}
+.fx.st .fx-h{background:var(--st)} .fx.st{background:var(--st-soft)} .fx.st .fx-v{color:var(--st)}
+:root[data-theme="dark"] .fx .fx-h{color:#101418}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fx .fx-h{color:#101418}}
+.fx:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.fx-note{font-size:13px;color:var(--muted);margin:6px 4px 0;display:flex;justify-content:space-between}
+.lock{width:14px;height:14px;flex:0 0 14px}
+.link{background:none;border:0;padding:4px 0;color:var(--brass);font-weight:700;cursor:pointer;font-size:14px}
+
+/* inputs */
+.field{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 16px 12px;margin-bottom:12px;display:block;transition:border-color .15s}
+.field:focus-within{border-color:var(--brass)}
+.field .lbl{display:flex;justify-content:space-between;font-size:15px;font-weight:700}
+.field .lbl span:last-child{font-weight:500;color:var(--muted);font-size:13px}
+.field input{width:100%;border:0;outline:0;background:transparent;font-size:40px;font-weight:800;padding:2px 0 0;direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+.field input::placeholder{color:var(--line);font-weight:700}
+.field.small input{font-size:22px;font-weight:700}
+.field.bad{border-color:var(--danger)}
+.hint{font-size:13px;color:var(--danger);min-height:0}
+
+/* result */
+.result{border-radius:16px;padding:16px;background:var(--surface);border:2px solid var(--line);margin-top:4px}
+.result.cu{border-color:var(--cu);background:var(--cu-soft)}
+.result.zn{border-color:var(--zn);background:var(--zn-soft)}
+.result.ok{border-color:var(--ok);background:var(--ok-soft)}
+.r-head{font-size:18px;font-weight:700;margin:0}
+.r-main{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:2px 0 10px}
+.r-amount{font-size:64px;font-weight:900;line-height:1.1}
+.r-unit{font-size:20px;font-weight:700}
+.r-metal{font-size:34px;font-weight:900}
+.cu .r-amount,.cu .r-metal{color:var(--cu)}
+.zn .r-amount,.zn .r-metal{color:var(--zn)}
+.ok .r-metal{color:var(--ok)}
+.r-empty{color:var(--muted);font-size:16px;margin:6px 0}
+.steps{border-top:1px solid color-mix(in srgb,var(--ink) 18%,transparent);padding-top:8px;font-size:15px}
+.steps div{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+.steps div span:first-child{color:var(--muted)}
+.steps b{font-weight:800}
+
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:16px;font-size:19px;font-weight:800;background:var(--brass);color:#fff;cursor:pointer;margin-top:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);font-weight:700;font-size:16px;padding:12px}
+.btn.danger{background:transparent;color:var(--danger);border:2px solid var(--danger);font-size:16px;padding:12px}
+:root[data-theme="dark"] .btn:not(.ghost):not(.danger){color:#1B1406}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn:not(.ghost):not(.danger){color:#1B1406}}
+
+/* history */
+.h-tools{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:6px}
+.h-tools .count{color:var(--muted);font-size:14px}
+.h-tools .btn{width:auto;margin:0;padding:8px 14px;font-size:14px}
+.day{font-size:14px;font-weight:700;color:var(--muted);margin:16px 2px 6px}
+.rec{background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:8px;border-inline-start:6px solid var(--line)}
+.rec.cu{border-inline-start-color:var(--cu)}
+.rec.zn{border-inline-start-color:var(--zn)}
+.rec.ok{border-inline-start-color:var(--ok)}
+.rec-top{display:flex;justify-content:space-between;align-items:center;gap:4px 8px;flex-wrap:wrap}
+.rec-time{white-space:nowrap}
+.rec-out{font-size:22px;font-weight:900}
+.rec.cu .rec-out{color:var(--cu)} .rec.zn .rec-out{color:var(--zn)} .rec.ok .rec-out{color:var(--ok)}
+.rec-time{font-size:14px;color:var(--muted)}
+.rec-in{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px;margin-top:2px}
+.rec-in span{color:var(--muted)} .rec-in b{font-weight:800;color:var(--ink)}
+.rec-meta{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);margin-top:4px}
+.rec-meta .link{color:var(--danger);font-weight:500;font-size:13px}
+.empty{background:var(--surface);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
+
+/* settings */
+.set-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.set-grid .full{grid-column:1/-1}
+.note{font-size:14px;color:var(--muted);background:var(--surface);border-radius:12px;padding:12px 14px;margin-top:14px;line-height:1.9}
+.note code{direction:ltr;unicode-bidi:isolate;font-family:var(--font);font-weight:700;color:var(--ink)}
+.status{font-size:13px;color:var(--muted);text-align:center;margin-top:18px}
+
+/* bottom nav */
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
+.nav-inner{max-width:620px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.nav button{border:0;background:none;padding:10px 4px 12px;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.nav button svg{width:24px;height:24px}
+.nav button[aria-current="page"]{color:var(--brass)}
+
+/* save sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(10,14,17,.55);z-index:40;display:none;align-items:flex-end;justify-content:center}
+.sheet-bg.open{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:620px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92%;overflow-y:auto}
+.sheet h3{margin:0 0 10px;font-size:20px;font-weight:800}
+.sum{border-radius:12px;padding:10px 14px;font-size:20px;font-weight:900;margin-bottom:12px;background:var(--surface);border-inline-start:6px solid var(--line)}
+.sum.cu{color:var(--cu);border-inline-start-color:var(--cu)} .sum.zn{color:var(--zn);border-inline-start-color:var(--zn)} .sum.ok{color:var(--ok);border-inline-start-color:var(--ok)}
+.sum span{display:block;font-size:14px;font-weight:500;color:var(--muted)}
+.when{background:var(--surface);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.when span{color:var(--muted);font-size:14px}
+.when b{font-size:17px;font-weight:800}
+.q{font-size:17px;font-weight:800;margin:0 0 8px}
+.melts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.melts button{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 0 8px;font-weight:800;font-size:16px;cursor:pointer;line-height:1.3;position:relative}
+.melts button small{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+.melts button[aria-pressed="true"]{border-color:var(--brass);background:var(--brass);color:#fff}
+.melts button[aria-pressed="true"] small{color:#fff}
+.melts button.next::after{content:"";position:absolute;top:6px;left:6px;width:7px;height:7px;border-radius:50%;background:var(--brass)}
+.melts button[aria-pressed="true"].next::after{background:#fff}
+.other{display:flex;gap:8px;align-items:center;margin:10px 0 4px;font-size:15px}
+.other input{width:90px;border:2px solid var(--line);border-radius:10px;padding:8px;background:var(--surface);font-size:18px;font-weight:700;text-align:center}
+.sheet .row{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+.sheet .row .btn{margin-top:14px}
+.chip{display:inline-block;background:var(--brass-soft);color:var(--brass);font-weight:800;font-size:14px;border-radius:8px;padding:1px 10px}
+.toast{position:fixed;left:50%;transform:translate(-50%,20px);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--bar);color:var(--bar-ink);padding:10px 18px;border-radius:12px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.toast,.field{transition:none}}
+@media (max-width:360px){.fx .fx-v{font-size:28px}.field input{font-size:34px}.r-amount{font-size:52px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <p class="app-title">محاسبه آنالیز ذوب</p>
+    <div class="tabs" id="tabs" role="tablist"></div>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<nav class="nav" aria-label="بخش‌ها">
+  <div class="nav-inner">
+    <button data-view="calc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h2M12 18h2"/></svg>محاسبه</button>
+    <button data-view="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>سوابق</button>
+    <button data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>تنظیمات</button>
+  </div>
+</nav>
+<div class="sheet-bg" id="sheetBg">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle">ثبت محاسبه</h3>
+    <div class="sum" id="sheetSum"></div>
+    <div class="when" id="sheetWhen"></div>
+    <p class="q">این آنالیز مربوط به کدام ذوب است؟</p>
+    <div class="melts" id="melts"></div>
+    <div class="other"><span>شماره دیگر:</span><input id="meltOther" inputmode="numeric" autocomplete="off"><span id="meltHint" style="color:var(--muted);font-size:13px"></span></div>
+    <label class="field small" style="margin-top:10px"><span class="lbl"><span>توضیح</span><span>اختیاری</span></span>
+      <input id="sheetNote" autocomplete="off" style="direction:rtl;text-align:right"></label>
+    <div class="row"><button class="btn" id="sheetOk" disabled>ثبت</button><button class="btn ghost" id="sheetCancel">انصراف</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- helpers ---------- */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const nf = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 2});
+const nf3 = new Intl.NumberFormat('fa-IR', {maximumFractionDigits: 3});
+const fmt = (n, p) => '<bdi class="n">' + (p === 3 ? nf3 : nf).format(n) + '</bdi>';
+const fmtSigned = n => '<bdi class="n">' + (n > 0 ? '+' : n < 0 ? '−' : '') + nf3.format(Math.abs(n)) + '</bdi>';
+const dayFmt = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+const timeFmt = new Intl.DateTimeFormat('fa-IR', {hour:'2-digit', minute:'2-digit'});
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function parseNum(s){
+  if (s == null) return NaN;
+  s = String(s).trim()
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[٫,\/]/g, '.').replace(/[^\d.\-]/g, '');
+  if (s === '' || s === '.' || s === '-') return NaN;
+  return Number(s);
+}
+
+/* ---------- core calculation (same as the Excel sheet) ----------
+   Excel:  B5 = (((شاهد - رازی) * -1) + ذوب) - استاندارد
+           B6 = IF(B5<=0, B5*-1*15, B5*10)
+           E6 = IF(B5<0, "مس", "روی")                                */
+function calc(p, shahed, melt){
+  const err = shahed - p.razi;                         // خطای دستگاه
+  let dev = (((shahed - p.razi) * -1) + melt) - p.standard;
+  dev = Math.round(dev * 1e9) / 1e9;                   // حذف خطای اعشاری ممیز شناور
+  const amount = dev <= 0 ? dev * -1 * p.cuFactor : dev * p.znFactor;
+  const metal = dev === 0 ? 'ok' : (dev < 0 ? 'cu' : 'zn');
+  return { err, corrected: melt - err, dev, amount: Math.round(amount * 1000) / 1000, metal };
+}
+const ORD = ['','اول','دوم','سوم','چهارم','پنجم','ششم','هفتم','هشتم','نهم','دهم','یازدهم','دوازدهم','سیزدهم','چهاردهم','پانزدهم','شانزدهم','هفدهم','هجدهم','نوزدهم','بیستم'];
+const ordinal = n => ORD[n] || (nf.format(n) + 'ام');
+const METAL = { cu: 'مس', zn: 'روی', ok: 'در حد استاندارد' };
+
+/* ---------- state ---------- */
+const DEFAULTS = [
+  { id:'ms64', name:'آنالیز لوله', alloy:'MS64', razi:63.3, standard:63.7, cuFactor:15, znFactor:10, unit:'کیلوگرم', order:1 },
+  { id:'ms58', name:'آنالیز کلکتور', alloy:'MS58', razi:62, standard:57.8, cuFactor:15, znFactor:10, unit:'کیلوگرم', order:2 }
+];
+const S = {
+  profiles: LS.get('meltcalc.profiles', null) || DEFAULTS.map(p => ({...p})),
+  records: LS.get('meltcalc.records', []),
+  active: LS.get('meltcalc.active', null),
+  view: 'calc',
+  draft: LS.get('meltcalc.draft', {}),   // per profile: {shahed, melt, heat}
+  db: null, synced: false
+};
+if (!S.profiles.find(p => p.id === S.active)) S.active = S.profiles[0].id;
+
+const prof = () => S.profiles.find(p => p.id === S.active) || S.profiles[0];
+const sortedProfiles = () => S.profiles.slice().sort((a,b) => (a.order||0) - (b.order||0));
+function saveLocal(){
+  LS.set('meltcalc.profiles', S.profiles);
+  LS.set('meltcalc.records', S.records);
+  LS.set('meltcalc.active', S.active);
+}
+
+/* ---------- shared storage (claude.ai) with local fallback ---------- */
+async function dbWrite(fn){
+  if (!S.db) return;
+  try { await fn(S.db); }
+  catch(e){
+    if (e && e.code === 'unavailable'){ await new Promise(r => setTimeout(r, 600 + Math.random()*800)); try{ await fn(S.db); }catch(_){} }
+    else if (e && e.code === 'quota_exceeded') toast('فضای ذخیره پر است؛ سوابق قدیمی را حذف کنید');
+  }
+}
+async function initDb(){
+  if (!window.claude || typeof window.claude.use !== 'function') return;
+  let db = null;
+  try { db = await window.claude.use('db'); } catch(e){ db = null; }
+  if (!db) return;
+  try {
+    const [ps, rs] = await Promise.all([
+      db.collection('profiles').get(),
+      db.collection('records').orderBy('ts','desc').limit(1000).get()
+    ]);
+    S.db = db;
+    // first run on shared store: upload what is on this device
+    if (ps.docs.length === 0){
+      for (const p of S.profiles) await dbWrite(d => d.collection('profiles').doc(p.id).set(p));
+    }
+    if (rs.docs.length === 0 && S.records.length){
+      for (const r of S.records.slice(0, 300)) await dbWrite(d => d.collection('records').doc(r.id).set(r));
+    }
+    db.collection('profiles').onSnapshot(snap => {
+      const list = snap.docs.filter(d => d.exists).map(d => ({ ...d.data(), id: d.id }));
+      if (list.length){ S.profiles = list; if (!list.find(p => p.id === S.active)) S.active = sortedProfiles()[0].id; }
+      S.synced = true; saveLocal(); render(true);
+    }, () => {});
+    db.collection('records').orderBy('ts','desc').limit(1000).onSnapshot(snap => {
+      S.records = snap.docs.filter(d => d.exists).map(d => ({ ...d.data(), id: d.id }));
+      S.synced = true; saveLocal(); render(true);
+    }, () => {});
+  } catch(e){ S.db = null; }
+}
+
+/* ---------- UI ---------- */
+const $main = document.getElementById('main');
+const $tabs = document.getElementById('tabs');
+let toastT;
+function toast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800);
+}
+const lockSvg = '<svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+function renderTabs(){
+  $tabs.innerHTML = sortedProfiles().map(p =>
+    `<button class="tab" role="tab" aria-selected="${p.id === S.active}" data-id="${esc(p.id)}">
+       <span class="t-name">${esc(p.name)}</span><span class="t-alloy">${esc(p.alloy)}</span></button>`
+  ).join('') + `<button class="tab add" id="addTab" aria-label="افزودن سربرگ">+</button>`;
+}
+
+function draft(){ return S.draft[S.active] || (S.draft[S.active] = {shahed:'', melt:'', heat:''}); }
+
+function resultHtml(p, d){
+  const sh = parseNum(d.shahed), me = parseNum(d.melt);
+  const valid = isFinite(sh) && isFinite(me) && sh > 0 && me > 0 && sh <= 100 && me <= 100;
+  if (!valid) return `<div class="result" id="result"><p class="r-head">نتیجه</p><p class="r-empty">نمونه شاهد و نمونه ذوب را وارد کنید تا مقدار افزودنی نمایش داده شود.</p></div>`;
+  const r = calc(p, sh, me);
+  const head = r.metal === 'ok' ? 'ذوب در حد استاندارد است' : 'به ذوب اضافه کنید';
+  const main = r.metal === 'ok'
+    ? `<div class="r-main"><span class="r-metal">نیازی به افزودن نیست</span></div>`
+    : `<div class="r-main"><span class="r-amount">${fmt(r.amount)}</span><span class="r-unit">${esc(p.unit)}</span><span class="r-metal">${METAL[r.metal]}</span></div>`;
+  return `<div class="result ${r.metal}" id="result">
+    <p class="r-head">${head}</p>${main}
+    <div class="steps">
+      <div><span>خطای دستگاه (شاهد − رازی)</span><b>${fmtSigned(r.err)}</b></div>
+      <div><span>مس واقعی ذوب (ذوب − خطا)</span><b>${fmt(r.corrected,3)}٪</b></div>
+      <div><span>اختلاف با استاندارد (${fmt(p.standard,3)}٪)</span><b>${fmtSigned(r.dev)}٪</b></div>
+    </div></div>`;
+}
+
+function viewCalc(){
+  const p = prof(), d = draft();
+  return `
+  <h2>مقادیر ثابت ${esc(p.alloy)}</h2>
+  <div class="fixed">
+    <button class="fx rz" data-go="settings" aria-label="نمونه رازی؛ برای تغییر به تنظیمات بروید">
+      <span class="fx-h">${lockSvg}نمونه رازی</span><span class="fx-v">${fmt(p.razi,3)}<small>٪</small></span></button>
+    <button class="fx st" data-go="settings" aria-label="آنالیز استاندارد؛ برای تغییر به تنظیمات بروید">
+      <span class="fx-h">${lockSvg}آنالیز استاندارد</span><span class="fx-v">${fmt(p.standard,3)}<small>٪</small></span></button>
+  </div>
+  <p class="fx-note"><span>ضریب مس ${fmt(p.cuFactor,3)} ، ضریب روی ${fmt(p.znFactor,3)}</span><span>برای تغییر روی بلوک بزنید</span></p>
+
+  <h2>ورودی امروز</h2>
+  <label class="field" id="f-shahed"><span class="lbl"><span>نمونه شاهد</span><span>درصد مس</span></span>
+    <input id="in-shahed" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${esc(d.shahed)}"></label>
+  <label class="field" id="f-melt"><span class="lbl"><span>نمونه ذوب</span><span>درصد مس</span></span>
+    <input id="in-melt" inputmode="decimal" autocomplete="off" placeholder="0.0" value="${esc(d.melt)}"></label>
+
+  <div id="resultWrap">${resultHtml(p, d)}</div>
+  <button class="btn" id="saveCalc">ثبت محاسبه</button>`;
+}
+
+function recHtml(r){
+  const out = r.metal === 'ok' ? 'در حد استاندارد' : `${fmt(r.amount)} ${esc(r.unit)} ${METAL[r.metal]}`;
+  return `<div class="rec ${r.metal}">
+    <div class="rec-top"><span class="rec-out">${out}</span><span class="rec-time">${r.meltNo ? '<span class="chip">ذوب ' + ordinal(r.meltNo) + '</span> ' : ''}ساعت ${esc(timeFmt.format(new Date(r.ts)))}</span></div>
+    <div class="rec-in"><span>شاهد <b>${fmt(r.shahed,3)}</b></span><span>ذوب <b>${fmt(r.melt,3)}</b></span><span>اختلاف <b>${fmtSigned(r.dev)}</b></span></div>
+    <div class="rec-meta"><span>${r.note ? esc(r.note) + ' ، ' : ''}${r.heat ? 'ذوب: ' + esc(r.heat) + ' ، ' : ''}رازی ${fmt(r.razi,3)} ، استاندارد ${fmt(r.standard,3)}</span>
+      <button class="link" data-del="${esc(r.id)}">حذف</button></div>
+  </div>`;
+}
+
+function viewHistory(){
+  const p = prof();
+  const list = S.records.filter(r => r.pid === p.id).sort((a,b) => b.ts - a.ts);
+  if (!list.length) return `<h2>سوابق ${esc(p.name)}</h2><div class="empty">هنوز محاسبه‌ای ثبت نشده. در بخش محاسبه، اعداد را وارد و «ثبت محاسبه» را بزنید.</div>`;
+  let html = `<h2>سوابق ${esc(p.name)}</h2>
+    <div class="h-tools"><span class="count">${fmt(list.length)} مورد</span><button class="btn ghost" id="exportCsv">خروجی اکسل (CSV)</button></div>`;
+  let lastDay = '';
+  for (const r of list){
+    const day = dayFmt.format(new Date(r.ts));
+    if (day !== lastDay){ html += `<div class="day">${esc(day)}</div>`; lastDay = day; }
+    html += recHtml(r);
+  }
+  return html;
+}
+
+function numField(id, label, val, sub){
+  return `<label class="field small" id="f-${id}"><span class="lbl"><span>${label}</span><span>${sub||''}</span></span>
+    <input id="set-${id}" inputmode="decimal" autocomplete="off" value="${esc(val)}"></label>`;
+}
+function viewSettings(){
+  const p = prof();
+  return `
+  <h2>تنظیمات سربرگ</h2>
+  <div class="set-grid">
+    <label class="field small full"><span class="lbl"><span>نام سربرگ</span><span>مثلاً آنالیز لوله</span></span>
+      <input id="set-name" style="direction:rtl" value="${esc(p.name)}"></label>
+    <label class="field small"><span class="lbl"><span>کد آلیاژ</span></span>
+      <input id="set-alloy" value="${esc(p.alloy)}"></label>
+    <label class="field small"><span class="lbl"><span>واحد خروجی</span></span>
+      <input id="set-unit" style="direction:rtl" value="${esc(p.unit)}"></label>
+    ${numField('razi','نمونه رازی',p.razi,'٪ مس')}
+    ${numField('standard','آنالیز استاندارد',p.standard,'٪ مس')}
+    ${numField('cuFactor','ضریب مس',p.cuFactor,'اکسل: ۱۵')}
+    ${numField('znFactor','ضریب روی',p.znFactor,'اکسل: ۱۰')}
+  </div>
+  <button class="btn" id="saveSettings">ذخیره تنظیمات</button>
+  <div class="note">
+    روش محاسبه همان فرمول اکسل است:<br>
+    اختلاف = <code>ذوب − (شاهد − رازی) − استاندارد</code><br>
+    اگر اختلاف منفی باشد: مس = <code>قدرِ مطلقِ اختلاف × ضریب مس</code><br>
+    اگر اختلاف مثبت باشد: روی = <code>اختلاف × ضریب روی</code><br>
+    تغییر این مقادیر روی سوابق قبلی اثری ندارد؛ هر رکورد مقادیر زمان ثبت خودش را نگه می‌دارد.
+  </div>
+  ${S.profiles.length > 1 ? '<button class="btn danger" id="delProfile" style="margin-top:18px">حذف این سربرگ</button>' : ''}
+  <p class="status">${S.db ? (S.synced ? 'ذخیره‌سازی: همگام با حساب Claude' : 'در حال همگام‌سازی…') : 'ذخیره‌سازی: روی همین دستگاه'}</p>`;
+}
+
+function render(fromSync){
+  // avoid wiping what the user is typing when a sync arrives
+  if (fromSync && S.view === 'settings' && $main.contains(document.activeElement)) { renderTabs(); return; }
+  if (fromSync && S.view === 'calc' && $main.contains(document.activeElement)) { renderTabs(); refreshResult(); return; }
+  renderTabs();
+  $main.innerHTML = S.view === 'calc' ? viewCalc() : S.view === 'history' ? viewHistory() : viewSettings();
+  document.querySelectorAll('.nav button').forEach(b => { if (b.dataset.view === S.view) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  updateSaveBtn();
+}
+function refreshResult(){
+  const w = document.getElementById('resultWrap');
+  if (w) w.innerHTML = resultHtml(prof(), draft());
+  updateSaveBtn();
+}
+function updateSaveBtn(){
+  const b = document.getElementById('saveCalc'); if (!b) return;
+  const d = draft(), sh = parseNum(d.shahed), me = parseNum(d.melt);
+  b.disabled = !(isFinite(sh) && isFinite(me) && sh > 0 && me > 0 && sh <= 100 && me <= 100);
+}
+
+/* ---------- actions ---------- */
+/* save sheet: asks which melt this analysis belongs to; date/time is taken automatically */
+const $sheetBg = document.getElementById('sheetBg');
+let sheetSel = 0, sheetClock = null;
+const sameDay = (a, b) => dayFmt.format(new Date(a)) === dayFmt.format(new Date(b));
+function suggestedMelt(){
+  const now = Date.now();
+  const today = S.records.filter(r => r.pid === S.active && r.meltNo && sameDay(r.ts, now));
+  return today.length ? Math.max(...today.map(r => r.meltNo)) + 1 : 1;
+}
+function paintClock(){
+  const el = document.getElementById('sheetWhen'); if (!el) return;
+  const now = new Date();
+  el.innerHTML = `<span>${esc(dayFmt.format(now))}</span><b>ساعت ${esc(timeFmt.format(now))}</b>`;
+}
+function paintMelts(){
+  const next = suggestedMelt();
+  const n = Math.max(10, next);
+  let html = '';
+  for (let i = 1; i <= Math.min(n, 15); i++)
+    html += `<button type="button" data-melt="${i}" aria-pressed="${sheetSel === i}" class="${i === next ? 'next' : ''}">${fmt(i)}<small>${ORD[i]}</small></button>`;
+  document.getElementById('melts').innerHTML = html;
+  document.getElementById('sheetOk').disabled = !(sheetSel > 0);
+  document.getElementById('meltHint').textContent = 'ذوب بعدیِ امروز: ' + ordinal(next);
+}
+function openSheet(){
+  const p = prof(), d = draft();
+  const sh = parseNum(d.shahed), me = parseNum(d.melt);
+  if (!(sh > 0 && me > 0 && sh <= 100 && me <= 100)) return;
+  const r = calc(p, sh, me);
+  const sum = document.getElementById('sheetSum');
+  sum.className = 'sum ' + r.metal;
+  sum.innerHTML = (r.metal === 'ok' ? 'در حد استاندارد' : `${fmt(r.amount)} ${esc(p.unit)} ${METAL[r.metal]}`)
+    + `<span>${esc(p.name)} ${esc(p.alloy)} ، شاهد ${fmt(sh,3)} ، ذوب ${fmt(me,3)}</span>`;
+  sheetSel = 0;
+  document.getElementById('meltOther').value = '';
+  document.getElementById('sheetNote').value = '';
+  paintClock(); paintMelts();
+  clearInterval(sheetClock); sheetClock = setInterval(paintClock, 15000);
+  $sheetBg.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(){
+  $sheetBg.classList.remove('open'); clearInterval(sheetClock); document.body.style.overflow = '';
+}
+$sheetBg.addEventListener('click', e => {
+  if (e.target === $sheetBg || e.target.closest('#sheetCancel')) { closeSheet(); return; }
+  const b = e.target.closest('[data-melt]');
+  if (b){ sheetSel = Number(b.dataset.melt); document.getElementById('meltOther').value = ''; paintMelts(); return; }
+  if (e.target.closest('#sheetOk')) confirmSave();
+});
+document.getElementById('meltOther').addEventListener('input', e => {
+  const v = Math.floor(parseNum(e.target.value));
+  sheetSel = v > 0 && v < 1000 ? v : 0; paintMelts();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $sheetBg.classList.contains('open')) closeSheet(); });
+
+async function confirmSave(){
+  if (!(sheetSel > 0)) return;
+  const p = prof(), d = draft();
+  const sh = parseNum(d.shahed), me = parseNum(d.melt);
+  if (!(sh > 0 && me > 0 && sh <= 100 && me <= 100)) { closeSheet(); return; }
+  const r = calc(p, sh, me);
+  const rec = { id: uid(), pid: p.id, ts: Date.now(), meltNo: sheetSel, note: document.getElementById('sheetNote').value.trim(),
+    shahed: sh, melt: me,
+    razi: p.razi, standard: p.standard, cuFactor: p.cuFactor, znFactor: p.znFactor, unit: p.unit,
+    err: r.err, dev: r.dev, amount: r.amount, metal: r.metal };
+  S.records.unshift(rec);
+  d.melt = '';                              // نمونه شاهد برای ذوب بعدی باقی می‌ماند
+  LS.set('meltcalc.draft', S.draft); saveLocal();
+  closeSheet(); render(); toast('ذوب ' + ordinal(rec.meltNo) + ' ثبت شد');
+  await dbWrite(db => db.collection('records').doc(rec.id).set(rec));
+}
+
+async function saveSettings(){
+  const p = prof();
+  const get = id => document.getElementById('set-' + id);
+  const nums = {};
+  let ok = true;
+  for (const k of ['razi','standard','cuFactor','znFactor']){
+    const v = parseNum(get(k).value);
+    const bad = !isFinite(v) || v <= 0 || ((k === 'razi' || k === 'standard') && v > 100);
+    document.getElementById('f-' + k).classList.toggle('bad', bad);
+    if (bad) ok = false; else nums[k] = v;
+  }
+  const name = get('name').value.trim();
+  if (!name){ toast('نام سربرگ را وارد کنید'); return; }
+  if (!ok){ toast('عدد نامعتبر است'); return; }
+  Object.assign(p, nums, { name, alloy: get('alloy').value.trim(), unit: get('unit').value.trim() || 'کیلوگرم' });
+  saveLocal(); render(); toast('تنظیمات ذخیره شد');
+  await dbWrite(db => db.collection('profiles').doc(p.id).set({...p}));
+}
+
+async function addProfile(){
+  const base = prof();
+  const maxOrder = Math.max(0, ...S.profiles.map(p => p.order || 0));
+  const p = { id: uid(), name: 'سربرگ جدید', alloy: '', razi: base.razi, standard: base.standard,
+    cuFactor: base.cuFactor, znFactor: base.znFactor, unit: base.unit, order: maxOrder + 1 };
+  S.profiles.push(p); S.active = p.id; S.view = 'settings';
+  saveLocal(); render();
+  const n = document.getElementById('set-name'); if (n){ n.focus(); n.select(); }
+  await dbWrite(db => db.collection('profiles').doc(p.id).set(p));
+}
+
+async function deleteProfile(){
+  const p = prof();
+  if (!confirm(`سربرگ «${p.name}» و همه سوابق آن حذف شود؟`)) return;
+  const recs = S.records.filter(r => r.pid === p.id);
+  S.profiles = S.profiles.filter(x => x.id !== p.id);
+  S.records = S.records.filter(r => r.pid !== p.id);
+  S.active = sortedProfiles()[0].id; S.view = 'calc';
+  saveLocal(); render(); toast('سربرگ حذف شد');
+  await dbWrite(db => db.collection('profiles').doc(p.id).delete());
+  for (const r of recs) await dbWrite(db => db.collection('records').doc(r.id).delete());
+}
+
+async function deleteRecord(id){
+  if (!confirm('این رکورد حذف شود؟')) return;
+  S.records = S.records.filter(r => r.id !== id);
+  saveLocal(); render();
+  await dbWrite(db => db.collection('records').doc(id).delete());
+}
+
+async function exportCsv(){
+  const p = prof();
+  const list = S.records.filter(r => r.pid === p.id).sort((a,b) => a.ts - b.ts);
+  const dfull = new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', {year:'numeric', month:'2-digit', day:'2-digit'});
+  const tfull = new Intl.DateTimeFormat('en-GB', {hour:'2-digit', minute:'2-digit'});
+  const q = v => '"' + String(v).replace(/"/g,'""') + '"';
+  const rows = [['تاریخ','ساعت','ذوب','توضیح','نمونه رازی','آنالیز استاندارد','نمونه شاهد','نمونه ذوب','اختلاف','فلز','مقدار','واحد']];
+  for (const r of list) rows.push([dfull.format(new Date(r.ts)), tfull.format(new Date(r.ts)), r.meltNo ? ordinal(r.meltNo) : '', [r.note, r.heat].filter(Boolean).join(' - '), r.razi, r.standard, r.shahed, r.melt, r.dev, METAL[r.metal], r.metal === 'ok' ? 0 : r.amount, r.unit]);
+  const csv = '\uFEFF' + rows.map(r => r.map(q).join(',')).join('\r\n');
+  const filename = `analysis-${(p.alloy || 'melt').replace(/[^\w-]/g,'')}.csv`;
+  const C = window.Capacitor;
+  if (C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.Filesystem && C.Plugins.Share){
+    try {
+      const w = await C.Plugins.Filesystem.writeFile({ path: filename, data: csv, directory: 'CACHE', encoding: 'utf8' });
+      await C.Plugins.Share.share({ title: filename, url: w.uri, dialogTitle: 'ارسال فایل سوابق' });
+    } catch(e){ if (!/cancel/i.test(String(e && e.message))) toast('ذخیره فایل ممکن نشد'); }
+    return;
+  }
+  let dl = null;
+  try { if (window.claude && window.claude.use) dl = await window.claude.use('downloads'); } catch(e){}
+  if (dl){
+    try { await dl.save({ filename, data: csv }); toast('فایل ذخیره شد'); }
+    catch(e){ if (e && e.code !== 'declined') toast('ذخیره فایل ممکن نشد'); }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- events ---------- */
+$tabs.addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  if (t.id === 'addTab') { addProfile(); return; }
+  S.active = t.dataset.id; LS.set('meltcalc.active', S.active); render();
+});
+document.querySelector('.nav').addEventListener('click', e => {
+  const b = e.target.closest('button[data-view]'); if (!b) return;
+  S.view = b.dataset.view; render(); window.scrollTo(0,0);
+});
+$main.addEventListener('click', e => {
+  const t = e.target;
+  if (t.closest('#saveCalc')) openSheet();
+  else if (t.closest('#saveSettings')) saveSettings();
+  else if (t.closest('#delProfile')) deleteProfile();
+  else if (t.closest('#exportCsv')) exportCsv();
+  else if (t.closest('[data-del]')) deleteRecord(t.closest('[data-del]').dataset.del);
+  else if (t.closest('[data-go]')) { S.view = t.closest('[data-go]').dataset.go; render(); window.scrollTo(0,0); }
+});
+$main.addEventListener('input', e => {
+  const map = { 'in-shahed':'shahed', 'in-melt':'melt' };
+  const k = map[e.target.id]; if (!k) return;
+  draft()[k] = e.target.value;
+  LS.set('meltcalc.draft', S.draft);
+  refreshResult();
+});
+$main.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.id === 'in-shahed') { e.preventDefault(); document.getElementById('in-melt').focus(); }
+  else if (e.target.id === 'in-melt') { e.preventDefault(); e.target.blur(); }
+});
+
+render();
+initDb();
+
+/* installable web app: only when served from your own site, not inside claude.ai */
+(function pwa(){
+  const inClaude = /(^|\.)claude\.(ai|site|com)$|claudeusercontent|anthropic/.test(location.hostname) || window.parent !== window;
+  if (inClaude || !/^https?:$/.test(location.protocol) || window.Capacitor) return;
+  const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l);
+  const i = document.createElement('link'); i.rel = 'apple-touch-icon'; i.href = 'icons/icon-192.png'; document.head.appendChild(i);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+})();
+</script>
+</body>
+</html>
