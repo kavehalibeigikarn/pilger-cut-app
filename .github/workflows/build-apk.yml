@@ -17,14 +17,29 @@ jobs:
           java-version: '17'
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Find project folder
+        run: |
+          echo "---- repo files ----"
+          find . -maxdepth 3 -not -path './.git*' | sort
+          SG=$(find . -name settings.gradle -not -path './.git/*' | head -1)
+          if [ -z "$SG" ]; then
+            echo "ERROR: settings.gradle not found - files were not uploaded correctly"
+            exit 1
+          fi
+          DIR=$(dirname "$SG")
+          echo "Project folder: $DIR"
+          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
 
       - name: Build debug APK
         run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          cd "$PROJECT_DIR"
+          gradle assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk PilgerCut.apk
+        run: cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" PilgerCut.apk
 
       - uses: actions/upload-artifact@v4
         with:
