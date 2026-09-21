@@ -20,26 +20,341 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Find project folder
+      - name: Generate Android project
+        shell: bash
         run: |
-          echo "---- repo files ----"
-          find . -maxdepth 3 -not -path './.git*' | sort
-          SG=$(find . -name settings.gradle -not -path './.git/*' | head -1)
-          if [ -z "$SG" ]; then
-            echo "ERROR: settings.gradle not found - files were not uploaded correctly"
-            exit 1
+          set -e
+          IDX=$(find . -name index.html -not -path './.git/*' -not -path './android-build/*' | head -1)
+          if [ -z "$IDX" ]; then echo "ERROR: index.html not found in repo"; find . -maxdepth 3 -not -path './.git*' | sort; exit 1; fi
+          WEB=$(dirname "$IDX")
+          echo "Web files folder: $WEB"
+          ls -la "$WEB"
+          P=android-build
+          A=$P/app/src/main
+          mkdir -p $A/assets $A/java/ir/kaveh/pilgercut $A/res/values $A/res/mipmap-xxxhdpi
+          tar -C "$WEB" --exclude='./.git' --exclude='./.github' --exclude='./android-build' --exclude='*.md' -cf - . | tar -C $A/assets -xf -
+          ICON=$(find . -name icon-192.png -not -path './.git/*' -not -path './android-build/*' | head -1)
+          if [ -n "$ICON" ]; then
+            cp "$ICON" $A/res/mipmap-xxxhdpi/ic_launcher.png
+            ICON_REF='@mipmap/ic_launcher'
+          else
+            ICON_REF='@android:drawable/sym_def_app_icon'
           fi
-          DIR=$(dirname "$SG")
-          echo "Project folder: $DIR"
-          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+          cat > $P/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = 'PilgerCutApp'
+          include ':app'
+          EOF
+          cat > $P/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.5.2' apply false
+          }
+          EOF
+          cat > $P/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.nonTransitiveRClass=true
+          EOF
+          cat > $P/app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'ir.kaveh.pilgercut'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId 'ir.kaveh.pilgercut'
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName '1.0'
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          EOF
+          cat > $A/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="__ICON__"
+                  android:roundIcon="__ICON__"
+                  android:label="@string/app_name"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="portrait"
+                      android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+          cat > $A/res/values/strings.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">طول برش پیلگر</string>
+          </resources>
+          EOF
+          cat > $A/res/values/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+                  <item name="android:windowBackground">@color/bg</item>
+                  <item name="android:colorPrimary">@color/bg</item>
+                  <item name="android:colorPrimaryDark">@color/bg</item>
+                  <item name="android:colorAccent">@color/brass</item>
+                  <item name="android:statusBarColor">@color/bg</item>
+                  <item name="android:navigationBarColor">@color/bg</item>
+              </style>
+          </resources>
+          EOF
+          cat > $A/res/values/colors.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="bg">#14110D</color>
+              <color name="brass">#C9A227</color>
+          </resources>
+          EOF
+          cat > $A/java/ir/kaveh/pilgercut/MainActivity.java <<'EOF'
+          package ir.kaveh.pilgercut;
+
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.graphics.Color;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.Window;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebResourceResponse;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.Toast;
+
+          import java.io.InputStream;
+          import java.io.OutputStream;
+          import java.nio.charset.StandardCharsets;
+
+          /**
+           * پوسته‌ی اندروید برای محاسبه‌گر طول برش پیلگر.
+           * فایل‌های وب از پوشه‌ی assets و از طریق یک آدرس https مجازی بارگذاری می‌شوند
+           * تا localStorage (تاریخچه) به‌صورت دائمی کار کند. هیچ دسترسی اینترنتی لازم نیست.
+           */
+          public class MainActivity extends Activity {
+
+              private static final String HOST = "appassets.androidplatform.net";
+              private static final String BASE = "https://" + HOST + "/";
+              private static final int REQ_FILE_CHOOSER = 1001;
+              private static final int REQ_SAVE_FILE = 1002;
+
+              private WebView webView;
+              private ValueCallback<Uri[]> filePathCallback;
+              private String pendingSaveContent;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  Window w = getWindow();
+                  w.setStatusBarColor(Color.parseColor("#14110D"));
+                  w.setNavigationBarColor(Color.parseColor("#14110D"));
+
+                  webView = new WebView(this);
+                  webView.setBackgroundColor(Color.parseColor("#14110D"));
+                  webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                  setContentView(webView);
+
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setDatabaseEnabled(true);
+                  s.setAllowFileAccess(false);
+                  s.setAllowContentAccess(true);
+                  s.setSupportZoom(false);
+                  s.setBuiltInZoomControls(false);
+                  s.setDisplayZoomControls(false);
+                  s.setTextZoom(100); // جلوگیری از به‌هم‌ریختگی چیدمان با تنظیم اندازه فونت گوشی
+
+                  webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                          Uri uri = request.getUrl();
+                          if (!HOST.equals(uri.getHost())) {
+                              // هیچ درخواست بیرونی لازم نیست؛ همه‌چیز آفلاین است
+                              return new WebResourceResponse("text/plain", "utf-8", null);
+                          }
+                          String path = uri.getPath();
+                          if (path == null || path.equals("/") || path.isEmpty()) path = "/index.html";
+                          path = path.substring(1);
+                          try {
+                              InputStream in = getAssets().open(path);
+                              return new WebResourceResponse(mimeFor(path), mimeFor(path).startsWith("text") || path.endsWith(".js") || path.endsWith(".json") ? "utf-8" : null, in);
+                          } catch (Exception e) {
+                              WebResourceResponse r = new WebResourceResponse("text/plain", "utf-8", null);
+                              r.setStatusCodeAndReasonPhrase(404, "Not Found");
+                              return r;
+                          }
+                      }
+
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          return !HOST.equals(request.getUrl().getHost());
+                      }
+                  });
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                          if (filePathCallback != null) filePathCallback.onReceiveValue(null);
+                          filePathCallback = callback;
+                          Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                          i.addCategory(Intent.CATEGORY_OPENABLE);
+                          i.setType("*/*"); // فایل‌های JSON در بعضی گوشی‌ها نوع مشخصی ندارند
+                          try {
+                              startActivityForResult(Intent.createChooser(i, "انتخاب فایل تاریخچه"), REQ_FILE_CHOOSER);
+                          } catch (Exception e) {
+                              filePathCallback = null;
+                              return false;
+                          }
+                          return true;
+                      }
+                  });
+
+                  if (savedInstanceState != null) {
+                      webView.restoreState(savedInstanceState);
+                  } else {
+                      webView.loadUrl(BASE + "index.html");
+                  }
+              }
+
+              private static String mimeFor(String path) {
+                  String p = path.toLowerCase();
+                  if (p.endsWith(".html")) return "text/html";
+                  if (p.endsWith(".css")) return "text/css";
+                  if (p.endsWith(".js")) return "application/javascript";
+                  if (p.endsWith(".json")) return "application/json";
+                  if (p.endsWith(".png")) return "image/png";
+                  if (p.endsWith(".svg")) return "image/svg+xml";
+                  if (p.endsWith(".woff2")) return "font/woff2";
+                  if (p.endsWith(".woff")) return "font/woff";
+                  return "application/octet-stream";
+              }
+
+              /** پل جاوااسکریپت: ذخیره‌ی فایل خروجی تاریخچه با پنجره‌ی «ذخیره در...» اندروید */
+              private class Bridge {
+                  @JavascriptInterface
+                  public void saveFile(final String fileName, final String content) {
+                      runOnUiThread(() -> {
+                          pendingSaveContent = content;
+                          Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                          i.addCategory(Intent.CATEGORY_OPENABLE);
+                          i.setType("application/json");
+                          i.putExtra(Intent.EXTRA_TITLE, fileName);
+                          try {
+                              startActivityForResult(i, REQ_SAVE_FILE);
+                          } catch (Exception e) {
+                              pendingSaveContent = null;
+                              Toast.makeText(MainActivity.this, "ذخیره فایل در این گوشی پشتیبانی نمی‌شود", Toast.LENGTH_LONG).show();
+                          }
+                      });
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == REQ_FILE_CHOOSER) {
+                      Uri[] result = null;
+                      if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+                          result = new Uri[]{data.getData()};
+                      }
+                      if (filePathCallback != null) filePathCallback.onReceiveValue(result);
+                      filePathCallback = null;
+                  } else if (requestCode == REQ_SAVE_FILE) {
+                      String content = pendingSaveContent;
+                      pendingSaveContent = null;
+                      if (resultCode == RESULT_OK && data != null && data.getData() != null && content != null) {
+                          try (OutputStream os = getContentResolver().openOutputStream(data.getData())) {
+                              if (os == null) throw new Exception("no stream");
+                              os.write(content.getBytes(StandardCharsets.UTF_8));
+                              Toast.makeText(this, "فایل تاریخچه ذخیره شد ✓", Toast.LENGTH_SHORT).show();
+                          } catch (Exception e) {
+                              Toast.makeText(this, "خطا در ذخیره فایل", Toast.LENGTH_LONG).show();
+                          }
+                      }
+                  }
+              }
+
+              @Override
+              protected void onSaveInstanceState(Bundle outState) {
+                  super.onSaveInstanceState(outState);
+                  webView.saveState(outState);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView.canGoBack()) webView.goBack();
+                  else super.onBackPressed();
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (webView != null) webView.destroy();
+                  super.onDestroy();
+              }
+          }
+          EOF
+          sed -i "s#__ICON__#$ICON_REF#g" $A/AndroidManifest.xml
+          echo "---- generated project ----"
+          find $P -type f | sort
 
       - name: Build debug APK
         run: |
-          cd "$PROJECT_DIR"
+          cd android-build
           gradle assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp "$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk" PilgerCut.apk
+        run: cp android-build/app/build/outputs/apk/debug/app-debug.apk PilgerCut.apk
 
       - uses: actions/upload-artifact@v4
         with:
